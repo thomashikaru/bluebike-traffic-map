@@ -273,6 +273,7 @@ def create_route_visualization(
     route_map,
     max_val,
     cmap,
+    unique_days,
     output_file="map.pdf",
     bgcolor="black",
     node_color="black",
@@ -309,9 +310,8 @@ def create_route_visualization(
 
     # Add colorbar showing average daily bike traffic
     if cmap is not None and max_val > 0:
-        # Calculate average daily trips (assuming October data = 31 days)
-        days_in_month = 31
-        max_daily_trips = max_val / days_in_month
+        # Calculate average daily trips using actual number of days in dataset
+        max_daily_trips = max_val / unique_days
 
         # Create a scalar mappable for the colorbar
         norm = mcolors.Normalize(vmin=0, vmax=max_daily_trips)
@@ -408,12 +408,16 @@ def main():
         # Step 4: Map stations to network nodes
         df = map_stations_to_nodes(df, G)
 
-        # Step 5: Prepare visualization data
+        # Step 5: Calculate number of unique days in the dataset
+        unique_days = df["started_at"].dt.date.nunique()
+        print(f"Dataset spans {unique_days} unique days")
+
+        # Step 6: Prepare visualization data
         colors, widths, route_map, max_val, cmap = make_map_data(df, G)
 
-        # Step 6: Create and save visualization
+        # Step 7: Create and save visualization
         create_route_visualization(
-            G, colors, widths, route_map, max_val, cmap, OUTPUT_FILE
+            G, colors, widths, route_map, max_val, cmap, unique_days, OUTPUT_FILE
         )
 
         print("\n=== Analysis Complete ===")
