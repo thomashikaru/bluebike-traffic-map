@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BlueBike net flow by hour</title>
+    <link rel="stylesheet" href="vendor/leaflet.css" />
+    <link rel="stylesheet" href="vendor/maplibre-gl.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="panel" id="controls">
+      <h1 class="title">BlueBikes Traffic Dashboard</h1>
+      <p class="subtitle">
+        Traffic volume, estimated dock fullness, and direction of travel.
+      </p>
+
+      <div class="toggle-row" role="group" aria-label="Day type">
+        <button type="button" class="toggle-btn is-active" data-day="weekday" id="btn-weekday">
+          Weekday
+        </button>
+        <button type="button" class="toggle-btn" data-day="weekend" id="btn-weekend">
+          Weekend
+        </button>
+      </div>
+
+      <p class="section-label">Mode</p>
+      <div class="toggle-row" role="group" aria-label="View mode">
+        <button type="button" class="toggle-btn is-active" id="btn-mode-net">Net Flow</button>
+        <button type="button" class="toggle-btn" id="btn-mode-fullness">Dock Fullness</button>
+        <button type="button" class="toggle-btn" id="btn-mode-vector">Direction</button>
+      </div>
+
+      <div class="voronoi-toggle-wrap" id="voronoi-toggle-wrap">
+        <label class="voronoi-toggle">
+          <input type="checkbox" id="voronoi-toggle" />
+          Voronoi regions
+        </label>
+      </div>
+
+      <label class="hour-label" for="hour-slider">
+        <span>Time slot</span>
+        <strong id="hour-display">12:00 PM</strong>
+      </label>
+      <div class="slider-row">
+        <button type="button" id="play-btn" class="play-btn" aria-label="Play time animation">&#9654;</button>
+        <input
+          id="hour-slider"
+          type="range"
+          min="0"
+          max="23"
+          value="12"
+          aria-valuemin="0"
+          aria-valuemax="23"
+          aria-valuenow="12"
+          aria-valuetext="12:00 PM"
+        />
+      </div>
+
+      <div class="search-row">
+        <input
+          type="search"
+          id="station-search"
+          class="station-search"
+          placeholder="Search station…"
+          autocomplete="off"
+          aria-label="Search stations by name"
+        />
+      </div>
+
+      <label class="hour-label" for="marker-size-slider">
+        <span>Marker size</span>
+        <strong id="marker-size-display">1.0×</strong>
+      </label>
+      <div class="slider-row">
+        <input
+          id="marker-size-slider"
+          type="range"
+          min="50"
+          max="200"
+          value="100"
+          step="10"
+          aria-label="Marker size scale"
+        />
+      </div>
+
+      <div class="legend" aria-hidden="true">
+        <div class="legend-bar" id="legend-bar"></div>
+        <div class="legend-labels" id="legend-labels">
+          <span id="legend-label-min">Avg daily min net</span>
+          <span id="legend-label-mid">Mid of range</span>
+          <span id="legend-label-max">Avg daily max net</span>
+        </div>
+      </div>
+      <p class="legend-caption" id="legend-caption">
+        Blue / red toward that station's mean daily min / max net (as trips/h); pale near midpoint. Marker size ∝ daily trip volume.
+      </p>
+      <p class="data-provenance" id="data-provenance"></p>
+      </div>
+
+      <div class="map-wrap">
+        <div id="map" role="application" aria-label="BlueBike station map"></div>
+        <div class="status is-visible" id="status" role="status">Loading data…</div>
+      </div>
+    </div>
+
+    <div
+      id="chart-modal"
+      class="chart-modal"
+      aria-hidden="true"
+      aria-labelledby="chart-modal-title"
+    >
+      <div class="chart-modal__backdrop" id="chart-modal-backdrop" tabindex="-1"></div>
+      <div class="chart-modal__dialog" role="dialog" aria-modal="true">
+        <header class="chart-modal__header">
+          <h2 class="chart-modal__title" id="chart-modal-title">Station</h2>
+          <button type="button" class="chart-modal__close" id="chart-modal-close" aria-label="Close">
+            &times;
+          </button>
+        </header>
+        <p class="chart-modal__subtitle" id="chart-modal-subtitle"></p>
+        <div class="chart-modal__canvas-wrap">
+          <canvas id="station-chart" aria-label="Mean net flow by time of day"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="vendor/d3-delaunay.min.js"></script>
+    <script defer src="vendor/chart.umd.min.js"></script>
+    <script defer src="vendor/leaflet.js"></script>
+    <script defer src="vendor/maplibre-gl.js"></script>
+    <script defer src="vendor/leaflet-maplibre-gl.js"></script>
+    <script defer src="app.js"></script>
+  </body>
+</html>
