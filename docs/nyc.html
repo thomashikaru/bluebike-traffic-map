@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BlueBike net flow by hour</title>
+    <title>CitiBike NYC net flow by hour</title>
     <link rel="stylesheet" href="vendor/leaflet.css" />
     <link rel="stylesheet" href="vendor/maplibre-gl.css" />
     <link rel="stylesheet" href="styles.css" />
@@ -11,7 +11,7 @@
   <body>
     <div class="app-shell">
       <div class="panel" id="controls">
-      <h1 class="title">BlueBikes Traffic Dashboard</h1>
+      <h1 class="title">CitiBike NYC Traffic Dashboard</h1>
       <p class="subtitle">
         Traffic volume, estimated dock fullness, and direction of travel.
       </p>
@@ -100,7 +100,7 @@
       </div>
 
       <div class="map-wrap">
-        <div id="map" role="application" aria-label="BlueBike station map"></div>
+        <div id="map" role="application" aria-label="CitiBike NYC station map"></div>
         <div class="status is-visible" id="status" role="status">Loading data…</div>
       </div>
     </div>
@@ -128,10 +128,10 @@
 
     <script>
       window.SITE_CONFIG = {
-        center: [42.36, -71.06], zoom: 11,
-        stationsUrl: "data/stations_hourly.json",
-        gridUrl: "data/grid_vectors.json",
-        boundaryUrl: "data/boundary.geojson",
+        center: [40.73, -73.99], zoom: 12,
+        stationsUrl: "data_nyc/stations_hourly.json",
+        gridUrl: "data_nyc/grid_vectors.json",
+        boundaryUrl: "data_nyc/boundary.geojson",
       };
     </script>
     <script defer src="vendor/d3-delaunay.min.js"></script>

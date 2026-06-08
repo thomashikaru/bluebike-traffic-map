@@ -1,9 +1,13 @@
 (function () {
   "use strict";
 
-  const BOSTON_CENTER = [42.36, -71.06];
-  const DEFAULT_ZOOM = 11;
-  const PLAY_INTERVAL_MS = 150;
+  const cfg = window.SITE_CONFIG || {};
+  const INITIAL_CENTER = cfg.center || [42.36, -71.06];
+  const DEFAULT_ZOOM = cfg.zoom || 11;
+  const DATA_STATIONS  = cfg.stationsUrl  || "data/stations_hourly.json";
+  const DATA_GRID      = cfg.gridUrl      || "data/grid_vectors.json";
+  const BOUNDARY_URL   = cfg.boundaryUrl  || null;
+  const PLAY_INTERVAL_MS = 50;
   const MARKER_RADIUS_MIN = 4;
   const MARKER_RADIUS_MAX = 12;
   const VORONOI_ALPHA = 0.3;
@@ -210,7 +214,7 @@
     const markerSizeDisplay  = document.getElementById("marker-size-display");
 
     const map = L.map(mapEl, { zoomControl: true, preferCanvas: true })
-      .setView(BOSTON_CENTER, DEFAULT_ZOOM);
+      .setView(INITIAL_CENTER, DEFAULT_ZOOM);
 
     map.createPane("labelsPane");
     map.getPane("labelsPane").style.zIndex = 650;
@@ -313,6 +317,7 @@
     let voronoiMode = false;
     /** @type {{ voronoi: any, stations: any[], visuals: any[] } | null} */
     let activeVoronoi = null;
+    let activeBoundaryPath = null;
     /** @type {L.CircleMarker[]} */
     const markers = [];
     /** @type {{ meta: Record<string, unknown>, stations: any[] } | null} */
@@ -320,6 +325,7 @@
     /** @type {any | null} */
     let gridData   = null;
     let gridLoading = false;
+    let boundaryData = null;
     let slotsPerDay = 24;
     let slotDurationMinutes = 60;
     let maxVolume = 1;
@@ -489,6 +495,11 @@
       const voronoi = delaunay.voronoi([0, 0, w, h]);
       activeVoronoi = { voronoi, stations, visuals };
 
+      if (boundaryData) {
+        activeBoundaryPath = buildBoundaryPath(boundaryData);
+        ctx.save();
+        ctx.clip(activeBoundaryPath);
+      }
       for (let i = 0; i < stations.length; i++) {
         const path = voronoi.renderCell(i);
         if (!path) continue;
@@ -496,6 +507,28 @@
         ctx.fillStyle = withAlpha(visuals[i].fillColor, alpha);
         ctx.fill(new Path2D(path));
       }
+      if (boundaryData) ctx.restore();
+    }
+
+    function buildBoundaryPath(geojson) {
+      const path = new Path2D();
+      for (const feature of (geojson.features || [])) {
+        const geom = feature.geometry;
+        if (!geom) continue;
+        const polys = geom.type === "MultiPolygon" ? geom.coordinates : [geom.coordinates];
+        for (const poly of polys) {
+          for (const ring of poly) {
+            let first = true;
+            for (const [lng, lat] of ring) {
+              const pt = map.latLngToContainerPoint(L.latLng(lat, lng));
+              first ? path.moveTo(pt.x, pt.y) : path.lineTo(pt.x, pt.y);
+              first = false;
+            }
+            path.closePath();
+          }
+        }
+      }
+      return path;
     }
 
     function syncVoronoiLayer() {
@@ -513,6 +546,7 @@
         ctx.clearRect(0, 0, voronoiCanvas.width, voronoiCanvas.height);
         hideVoronoiTooltip();
         activeVoronoi = null;
+        activeBoundaryPath = null;
       }
       updateLegend();
     }
@@ -757,7 +791,7 @@
       if (gridData || gridLoading) return;
       gridLoading = true;
       setStatus(statusEl, true, "Loading direction data…");
-      fetch("data/grid_vectors.json")
+      fetch(DATA_GRID)
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
         .then((data) => {
           gridData = data;
@@ -787,6 +821,13 @@
         });
     }
 
+    if (BOUNDARY_URL) {
+      fetch(BOUNDARY_URL)
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then(data => { boundaryData = data; })
+        .catch(err => console.warn("Could not load boundary GeoJSON:", err));
+    }
+
     // Redraw canvas whenever the map view changes
     map.on("move zoom viewreset resize zoomend moveend", () => {
       if (viewMode === "vector") {
@@ -799,11 +840,18 @@
       if (voronoiIsActive()) scheduleVoronoiDraw();
     });
 
+    function isInsideBoundary(x, y) {
+      if (!activeBoundaryPath) return true;
+      const ctx = voronoiCanvas.getContext("2d");
+      return ctx.isPointInPath(activeBoundaryPath, x, y);
+    }
+
     voronoiCanvas.addEventListener("mousemove", (e) => {
       if (!activeVoronoi) return;
       const rect = voronoiCanvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      if (!isInsideBoundary(x, y)) { hideVoronoiTooltip(); return; }
       const i = activeVoronoi.voronoi.delaunay.find(x, y);
       if (i == null || i < 0) {
         hideVoronoiTooltip();
@@ -824,6 +872,7 @@
       const rect = voronoiCanvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      if (!isInsideBoundary(x, y)) return;
       const i = activeVoronoi.voronoi.delaunay.find(x, y);
       if (i >= 0) openStationChart(activeVoronoi.stations[i]);
     });
@@ -986,7 +1035,7 @@
 
     // ── Data load ─────────────────────────────────────────────────────────
 
-    fetch("data/stations_hourly.json")
+    fetch(DATA_STATIONS)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
